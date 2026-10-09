@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand FX</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <!-- three.js canvas is inserted here -->
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <div id="mask-preview" hidden></div>
+
+    <div id="hud">
+      <div id="hud-effect"></div>
+      <pre id="hud-debug"></pre>
+    </div>
+
+    <div id="help">
+      <kbd>pinch</kbd>/<kbd>space</kbd> next &middot; <kbd>1</kbd><kbd>2</kbd> select &middot;
+      <kbd>D</kbd> debug &middot; <kbd>M</kbd> mask &middot; <kbd>S</kbd> smoothing
+    </div>
+
+    <div id="start-screen" class="panel">
+      <h1>Hand FX</h1>
+      <p>Webcam hand tracking with real-time effects. Everything runs locally in your browser.</p>
+      <button id="start-btn" type="button">Start camera</button>
+      <p id="start-status" class="status"></p>
+    </div>
+
+    <div id="error-screen" class="panel" hidden>
+      <h1 id="error-title">Something went wrong</h1>
+      <p id="error-message"></p>
+      <button id="retry-btn" type="button">Reload</button>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
