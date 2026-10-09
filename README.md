@@ -34,7 +34,12 @@ npm run build    # static site in dist/
 npm run preview  # serve dist/ locally
 ```
 
-`dist/` can be hosted on any static host. Camera access requires **HTTPS** (or `localhost`).
+`dist/` can be hosted on any static host, at any sub-path (asset paths are relative).
+Camera access requires **HTTPS** (or `localhost`).
+
+**GitHub Pages:** `.github/workflows/pages.yml` builds and deploys on every push to
+`main`. In the repo's *Settings → Pages*, the source must be **GitHub Actions**
+(serving the branch directly publishes unbuilt source, which doesn't run).
 
 If the model download fails during install, download
 [`hand_landmarker.task`](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task)
