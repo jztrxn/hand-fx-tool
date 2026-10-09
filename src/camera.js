@@ -42,6 +42,50 @@ export async function startCamera() {
   return { video, aspect, stream };
 }
 
+// Dev/testing: use an image or video file instead of the webcam (`?src=/dev/hand.jpg`).
+// Images are drawn into a canvas with a slow drift so motion-based effects have something to do.
+export async function startMediaSource(src) {
+  const video = document.createElement("video");
+  video.playsInline = true;
+  video.muted = true;
+  video.loop = true;
+
+  if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(src)) {
+    const img = new Image();
+    img.src = src;
+    await img.decode().catch(() => {
+      throw new CameraError("Test image failed to load", `Could not load ${src}`);
+    });
+    const canvas = document.createElement("canvas");
+    // Pad portrait images to 16:9 so the stage looks like a webcam.
+    canvas.height = 720;
+    canvas.width = 1280;
+    const ctx = canvas.getContext("2d");
+    const s = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.92;
+    const draw = (t) => {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const dx = Math.sin(t / 900) * 60;
+      const dy = Math.cos(t / 1300) * 20;
+      const w = img.width * s;
+      const h = img.height * s;
+      ctx.drawImage(img, (canvas.width - w) / 2 + dx, (canvas.height - h) / 2 + dy, w, h);
+      requestAnimationFrame(draw);
+    };
+    draw(0);
+    video.srcObject = canvas.captureStream(30);
+  } else {
+    video.src = src;
+  }
+
+  await new Promise((resolve, reject) => {
+    video.addEventListener("loadeddata", resolve, { once: true });
+    video.addEventListener("error", () => reject(new CameraError("Test video failed to load", `Could not load ${src}`)), { once: true });
+  });
+  await video.play();
+  return { video, aspect: video.videoWidth / video.videoHeight };
+}
+
 function toCameraError(err) {
   switch (err?.name) {
     case "NotAllowedError":

@@ -5,3 +5,4 @@ public/wasm/
 *.log
 .tools/
 public/models/
+public/dev/
