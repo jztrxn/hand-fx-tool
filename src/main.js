@@ -5,8 +5,11 @@ import { createTracker } from "./tracker.js";
 import { createHandFilter } from "./smoothing.js";
 import { createMask } from "./mask.js";
 import { createOverlay } from "./overlay.js";
+import { makePinchDetector } from "./gestures.js";
+import { createSwitcher } from "./effects/index.js";
 
 const HAND_TIMEOUT_MS = 300; // reset a hand's filters after this long unseen
+const PRESENCE_RATE = 12; // presence easing speed (1/s)
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -80,8 +83,11 @@ function run({ video, aspect }, tracker) {
   resize();
   window.addEventListener("resize", resize);
 
+  const switcher = createSwitcher(stage, (effect) => overlay.setEffectName(effect.name));
+  if (import.meta.env.DEV) window.handfx = { stage, switcher, mask }; // console debugging
+
   // ---- per-hand state, keyed by handedness label (identity only, see plan §4)
-  const handStates = new Map(); // key -> { filter, lastSeen }
+  const handStates = new Map(); // key -> { filter, pinch, lastSeen }
   let hands = []; // [{ key, lm, pinch }]
   let smoothing = true;
 
@@ -96,7 +102,7 @@ function run({ video, aspect }, tracker) {
 
       let st = handStates.get(key);
       if (!st || now - st.lastSeen > HAND_TIMEOUT_MS) {
-        st = { filter: createHandFilter(), lastSeen: now };
+        st = { filter: createHandFilter(), pinch: makePinchDetector(), lastSeen: now };
         handStates.set(key, st);
       }
       const fdt = Math.max((now - st.lastSeen) / 1000, 1 / 240);
@@ -107,7 +113,9 @@ function run({ video, aspect }, tracker) {
       if (smoothing) lm = st.filter.filter(raw, fdt);
       else st.filter.reset();
 
-      next.push({ key, lm, pinch: null });
+      const pinch = st.pinch(lm, aspect);
+      if (pinch.fired) switcher.fire(now);
+      next.push({ key, lm, pinch });
     }
     hands = next;
     for (const [key, st] of handStates) if (now - st.lastSeen > HAND_TIMEOUT_MS) handStates.delete(key);
@@ -127,6 +135,12 @@ function run({ video, aspect }, tracker) {
       case "s":
         smoothing = !smoothing;
         break;
+      case " ":
+        e.preventDefault();
+        switcher.next();
+        break;
+      default:
+        if (e.key >= "1" && e.key <= "9" && +e.key <= switcher.count) switcher.select(+e.key - 1);
     }
   });
 
@@ -136,12 +150,24 @@ function run({ video, aspect }, tracker) {
   let lastNow = performance.now();
   let lastHud = 0;
   let raf = 0;
+  let presence = 0;
+  const frameState = {
+    nowMs: 0,
+    dt: 0,
+    aspect,
+    hands,
+    presence: 0,
+    videoTexture: stage.videoTexture,
+    maskTexture: mask.texture,
+    maskTexel: mask.texel,
+  };
 
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const rawDt = (now - lastNow) / 1000;
     lastNow = now;
     if (rawDt > 0) fps += (1 / rawDt - fps) * 0.05;
+    const dt = Math.min(Math.max(rawDt, 1 / 120), 1 / 20);
 
     const t0 = performance.now();
     const res = tracker.detect(video, now);
@@ -149,6 +175,15 @@ function run({ video, aspect }, tracker) {
       detectMs += (performance.now() - t0 - detectMs) * 0.1;
       processResult(res, now);
     }
+
+    const target = hands.length > 0 ? 1 : 0;
+    presence += (target - presence) * (1 - Math.exp(-dt * PRESENCE_RATE));
+
+    frameState.nowMs = now;
+    frameState.dt = dt;
+    frameState.hands = hands;
+    frameState.presence = presence;
+    switcher.current.update(frameState);
 
     overlay.draw(hands);
     stage.render();
@@ -160,6 +195,8 @@ function run({ video, aspect }, tracker) {
           `fps      ${fps.toFixed(0)}`,
           `detect   ${detectMs.toFixed(1)} ms (${tracker.delegate})`,
           `hands    ${hands.length}  [${hands.map((h) => h.key).join(", ")}]`,
+          `pinch    ${hands.map((h) => `${h.pinch.ratio.toFixed(2)}${h.pinch.active ? "*" : ""}`).join("  ") || "-"}`,
+          `presence ${presence.toFixed(2)}`,
           `smooth   ${smoothing ? "on" : "off"}`,
           `video    ${video.videoWidth}×${video.videoHeight}`,
         ].join("\n")
