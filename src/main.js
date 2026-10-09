@@ -56,7 +56,13 @@ ui.startBtn.addEventListener("click", async () => {
     });
     const testSrc = new URLSearchParams(location.search).get("src");
     const camP = testSrc ? startMediaSource(testSrc) : startCamera();
-    const [cam, tracker] = await Promise.all([camP, trackerP]);
+    let failed = false;
+    // If the model fails after the camera started, release the camera.
+    camP.then((c) => failed && c.stream?.getTracks().forEach((t) => t.stop()), () => {});
+    const [cam, tracker] = await Promise.all([camP, trackerP]).catch((err) => {
+      failed = true;
+      throw err;
+    });
     ui.startScreen.hidden = true;
     run(cam, tracker);
   } catch (err) {
@@ -162,8 +168,21 @@ function run({ video, aspect }, tracker) {
     maskTexel: mask.texel,
   };
 
+  let lastErrorLog = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame);
+    try {
+      step(now);
+    } catch (err) {
+      // Keep running; one bad frame (e.g. a transient tracker error) shouldn't kill the app.
+      if (now - lastErrorLog > 2000) {
+        lastErrorLog = now;
+        console.error(err);
+      }
+    }
+  }
+
+  function step(now) {
     const rawDt = (now - lastNow) / 1000;
     lastNow = now;
     if (rawDt > 0) fps += (1 / rawDt - fps) * 0.05;
