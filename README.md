@@ -8,6 +8,11 @@ No backend, no API keys, and the model and WASM are served locally.
 **Effects**
 - **Aura**: the background dims and your hands get a color-cycling neon glow.
 - **Particles**: sparks stream off your fingertips and trail fast motion.
+- **Filters**: hold up both hands, palms out. The fingertips of each adjacent finger
+  pair span a quad between your hands (thumb–index, index–middle, middle–ring,
+  ring–pinky), and each quad shows the camera through its own filter:
+  black & white, cartoon, comic-book halftone, and thermal. Move and spread your
+  fingers to reshape the windows.
 
 ## Requirements
 
@@ -39,8 +44,8 @@ manually and save it as `public/models/hand_landmarker.task`.
 
 | Input | Action |
 |---|---|
-| Pinch (thumb tip to index tip, either hand) | Next effect |
-| `1` / `2` | Select effect directly |
+| Pinch (thumb tip to index tip, either hand) | Next effect (in Filters, only with one hand in view, so framing the quads doesn't switch away) |
+| `1` / `2` / `3` | Select effect directly |
 | `Space` | Next effect |
 | `D` | Toggle debug overlay (skeleton + HUD) |
 | `M` | Toggle mask preview |
@@ -90,7 +95,7 @@ letterboxed to the video aspect ratio, so UVs, landmarks and the mask line up.
 | `src/mask.js` | Landmarks → mask canvas → `CanvasTexture` |
 | `src/stage.js` | three.js renderer, ortho camera, mirrored video quad, `toWorld()` |
 | `src/overlay.js` | Skeleton, HUD text, mask preview |
-| `src/effects/` | Effect registry/switcher, `aura.js`, `particles.js`, shared palette |
+| `src/effects/` | Effect registry/switcher, `aura.js`, `particles.js`, `filters.js`, shared palette |
 
 ## Adding an effect
 

@@ -6,8 +6,9 @@
 import { PINCH_COOLDOWN_MS } from "../gestures.js";
 import { createAura } from "./aura.js";
 import { createParticles } from "./particles.js";
+import { createFilters } from "./filters.js";
 
-export const EFFECTS = [createAura, createParticles];
+export const EFFECTS = [createAura, createParticles, createFilters];
 
 export function createSwitcher(stage, onChange = () => {}) {
   const effects = EFFECTS.map((make) => make());

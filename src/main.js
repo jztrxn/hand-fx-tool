@@ -120,7 +120,8 @@ function run({ video, aspect }, tracker) {
       else st.filter.reset();
 
       const pinch = st.pinch(lm, aspect);
-      if (pinch.fired) switcher.fire(now);
+      // Effects posed with two hands (Filters) only switch on a one-hand pinch.
+      if (pinch.fired && !(switcher.current.twoHandPose && n >= 2)) switcher.fire(now);
       next.push({ key, lm, pinch });
     }
     hands = next;
